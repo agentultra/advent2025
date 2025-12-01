@@ -19,5 +19,12 @@ day:
 	  done; \
 	fi
 
+run:
+	@if [ "$(DAY)" ]; then \
+	  echo "Solutions for Day: $(DAY)"; \
+	  for sol in $$(ls $(OUT_DIR)/day_$(DAY)); do \
+	    ./$(OUT_DIR)/day_$(DAY)/$$sol; \
+	  done; \
+	fi
 clean:
 	rm -r $(OUT_DIR)

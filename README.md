@@ -18,6 +18,17 @@ You can build the solution for a single day:
 
     make day DAY=<N>
 
-Where `<N>` is an numbered day.  It will compile all the `*.c` files
+Where `<N>` is a numbered day.  It will compile all the `*.c` files
 it finds there into executables in the output directory named after
 the source files.
+
+## Running
+
+You can run the solutions for a given day:
+
+    make run DAY=<N>
+
+Where `<N>` is a numbered day.  The target will test that the output
+directory for that day is there and execute any binaries it finds in
+that path.  Caveat emptor, I guess, _don't put silly things in that
+path_.
