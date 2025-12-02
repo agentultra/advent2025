@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define VAULT_MAX 100
+#include "mod_arith.h"
+
+#define VAULT_MAX 99
 
 int main()
 {
@@ -18,17 +20,11 @@ int main()
         assert(current_num >= 0 && current_num <= 99);
 
         if (turn == 'L') {
-            int next = (current_num - amt) % VAULT_MAX;
-
-            if (next < 0) {
-                current_num = VAULT_MAX + next;
-            } else {
-                current_num = next;
-            }
+            current_num = mod_sub(current_num, amt, VAULT_MAX + 1);
         }
 
         if (turn == 'R') {
-            current_num = (current_num + amt) % VAULT_MAX;
+            current_num = mod_add(current_num, amt, VAULT_MAX + 1);
         }
 
         if (current_num == 0) {
