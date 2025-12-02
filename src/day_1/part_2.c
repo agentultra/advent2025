@@ -42,4 +42,3 @@ int main()
 
     return 0;
 }
-// 5758 is too low
