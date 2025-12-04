@@ -15,7 +15,7 @@ day:
 	  for fsrc in $$(ls $(SRC_DIR)/day_$(DAY)/*.c); do \
 	    echo "\t.. $$fsrc"; \
 	    fname="$$(basename $$fsrc .c)"; \
-	    cc -I$(INCLUDES) $(CFLAGS) -o $(OUT_DIR)/day_$(DAY)/$$fname $$fsrc; \
+	    cc -I$(INCLUDES) $(CFLAGS) -o $(OUT_DIR)/day_$(DAY)/$$fname $$fsrc -lm; \
 	  done; \
 	fi
 
