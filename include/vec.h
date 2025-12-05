@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define RESIZE_FACTOR 2
 
@@ -38,6 +39,23 @@ struct chr_vec_t* chr_vec_new(int capacity) {
 void chr_vec_free(struct chr_vec_t* vec) {
     free(vec->entries);
     free(vec);
+}
+
+// Caller still has to free original
+struct chr_vec_t* chr_vec_copy(const struct chr_vec_t* vec) {
+    assert(vec != NULL);
+
+    char* new_entries = (char*)malloc(vec->capacity);
+    memcpy(new_entries, vec->entries, vec->capacity);
+
+    struct chr_vec_t* new_vec =
+        (struct chr_vec_t*)malloc(sizeof (struct chr_vec_t));
+
+    new_vec->ix = vec->ix;
+    new_vec->capacity = vec->capacity;
+    new_vec->entries = new_entries;
+
+    return new_vec;
 }
 
 void chr_vec_insert(struct chr_vec_t* vec, char c) {
