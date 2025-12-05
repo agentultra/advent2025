@@ -9,12 +9,21 @@
 
 #define BUFFER_SIZE 200
 #define INIT_GRID_SIZE 800
+#define MAX_ITERATIONS 100
 
 struct grid {
     uint64_t w;
     uint64_t h;
     struct chr_vec_t* entries;
 };
+
+void grid_set(struct grid* g, int x, int y, char c) {
+    int mod_x = x < 0 ? x + g->w : x % g->w;
+    int mod_y = y < 0 ? y + g->h : y % g->h;
+
+    int ix = (g->w * mod_y) + mod_x;
+    chr_vec_set(g->entries, ix, c);
+}
 
 char* grid_at(const struct grid* g, int x, int y) {
     int mod_x = x < 0 ? x + g->w : x % g->w;
@@ -51,6 +60,26 @@ bool is_accessible(const struct grid* g, int x, int y) {
     }
 
     return rolls < 4;
+}
+
+int remove_accessible(struct grid* g) {
+    struct chr_vec_t* new_entries = chr_vec_copy(g->entries);
+    struct grid new_grid = { .w = g->w, .h = g->h, .entries = new_entries };
+    int removed = 0;
+
+    for (int y = 0; y < new_grid.h; ++y) {
+        for (int x = 0; x < new_grid.w; ++x) {
+            char* t = grid_at(&new_grid, x, y);
+
+            if (*t == '@' && is_accessible(g, x, y)) {
+                grid_set(&new_grid, x, y, '.');
+                removed++;
+            }
+        }
+    }
+
+    g->entries = new_entries;
+    return removed;
 }
 
 void print_grid(const struct grid* g) {
@@ -103,9 +132,24 @@ int main()
         }
     }
 
+    uint64_t sum_2 = 0;
+    uint64_t iterations = 0;
+
+    while (iterations < MAX_ITERATIONS) {
+        int next = remove_accessible(&g);
+
+        if (next > 0) {
+            sum_2 += next;
+            iterations++;
+        } else {
+            break;
+        }
+    }
+
     //print_grid(&g);
     chr_vec_free(grid_entries);
 
     printf("Part 1: %" PRIu64 "\n", sum);
+    printf("Part 2: %" PRIu64 "\n", sum_2);
     return 0;
 }
