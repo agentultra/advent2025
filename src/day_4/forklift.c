@@ -17,7 +17,10 @@ struct grid {
 };
 
 char* grid_at(const struct grid* g, int x, int y) {
-    int ix = ((g->w * y) + x) % (g->w * g-> h);
+    int mod_x = x < 0 ? x + g->w : x % g->w;
+    int mod_y = y < 0 ? y + g->h : y % g->h;
+
+    int ix = (g->w * mod_y) + mod_x;
     return chr_vec_get(g->entries, ix);
 }
 
@@ -28,28 +31,35 @@ static int cardinals[8][2] = {
 };
 
 bool is_accessible(const struct grid* g, int x, int y) {
-    int free_spaces = 0;
+    int rolls = 0;
 
-    for (size_t i = 0; i < sizeof (cardinals); ++i) {
-        int cardinal_x = x + cardinals[i][0];
-        int cardinal_y = y + cardinals[i][1];
-        char* t = grid_at(g, cardinal_x, cardinal_y);
+    char* c = grid_at(g, x, y);
 
-        if (*t == '.') free_spaces++;
+    if (*c != '@') {
+        return false;
     }
 
-    return free_spaces >= 4;
+    for (size_t i = 0; i < 8; ++i) {
+        int cardinal_x = x + cardinals[i][0];
+        int cardinal_y = y + cardinals[i][1];
+
+        if (cardinal_x >= 0 && cardinal_x < g->w && cardinal_y >= 0 && cardinal_y < g->h) {
+            char* t = grid_at(g, cardinal_x, cardinal_y);
+
+            if (*t == '@') rolls++;
+        }
+    }
+
+    return rolls < 4;
 }
 
 void print_grid(const struct grid* g) {
     for (uint64_t y = 0; y < g->h; y++) {
         for (uint64_t x = 0; x < g->w; ++x) {
-            char* t = grid_at(g, x, y);
-            if (*t == '@' && is_accessible(g, x, y)) {
+            char* c = grid_at(g, x, y);
+            if (*c == '@' && is_accessible(g, x, y)) {
                 printf("x");
-            } else {
-                printf("%c", *grid_at(g, x, y));
-            }
+            } else {printf("%c", *c);}
             if (x == g->w-1) printf("\n");
         }
     }
@@ -78,7 +88,6 @@ int main()
     }
 
     printf("Grid W: %" PRIu64 ", Grid H: %" PRIu64 "\n", g.w, g.h);
-    print_grid(&g);
 
     uint64_t sum = 0;
 
@@ -94,6 +103,7 @@ int main()
         }
     }
 
+    //print_grid(&g);
     chr_vec_free(grid_entries);
 
     printf("Part 1: %" PRIu64 "\n", sum);
