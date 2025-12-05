@@ -46,16 +46,24 @@ struct chr_vec_t* chr_vec_copy(const struct chr_vec_t* vec) {
     assert(vec != NULL);
 
     char* new_entries = (char*)malloc(vec->capacity);
-    memcpy(new_entries, vec->entries, vec->capacity);
 
-    struct chr_vec_t* new_vec =
-        (struct chr_vec_t*)malloc(sizeof (struct chr_vec_t));
+    if (new_entries == NULL) {
+        printf("Out of memory: unable to copy vector\n.");
+        exit(-1);
+    }
 
-    new_vec->ix = vec->ix;
-    new_vec->capacity = vec->capacity;
-    new_vec->entries = new_entries;
+    if(memcpy(new_entries, vec->entries, vec->capacity) != NULL) {
+        struct chr_vec_t* new_vec =
+            (struct chr_vec_t*)malloc(sizeof (struct chr_vec_t));
 
-    return new_vec;
+        new_vec->ix = vec->ix;
+        new_vec->capacity = vec->capacity;
+        new_vec->entries = new_entries;
+
+        return new_vec;
+    }
+
+    return NULL;
 }
 
 void chr_vec_insert(struct chr_vec_t* vec, char c) {
