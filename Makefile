@@ -1,5 +1,5 @@
 CC=cc
-CFLAGS=-Wall -g
+CFLAGS=-Wall -ggdb3
 OUT_DIR=bin
 SRC_DIR=src
 INCLUDES=include
