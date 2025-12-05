@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "grid.h"
+#include "vec.h"
 
 #define BUFFER_SIZE 200
 #define INIT_GRID_SIZE 800
