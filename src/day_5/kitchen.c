@@ -132,5 +132,3 @@ int main()
     printf("Part 1: %" PRIu64 "\n", sum_1);
     return 0;
 }
-
-// 884 is too low!
