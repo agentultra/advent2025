@@ -1,4 +1,8 @@
+#ifndef VECTOR_H
+#define VECTOR_H
+
 #include <assert.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -114,3 +118,89 @@ char* chr_vec_peek(struct chr_vec_t* vec) {
 
     return &vec->entries[vec->ix];
 }
+
+struct vec_t {
+    size_t ix;
+    size_t elem_size;
+    uint64_t capacity;
+    void* entries;
+};
+
+struct vec_t* vec_new(int capacity, size_t elem_size) {
+    void* entries = (void*)malloc(capacity * elem_size);
+
+    if (!entries) {
+        printf("Error allocating char vector entries\n");
+        exit(-1);
+    }
+
+    struct vec_t* vector =
+        (struct vec_t*)malloc(sizeof (struct vec_t));
+
+    if (!vector) {
+        printf("Error allocating vector\n");
+        exit(-1);
+    }
+
+    vector->ix = 0;
+    vector->elem_size = elem_size;
+    vector->capacity = capacity;
+    vector->entries = entries;
+
+    return vector;
+}
+
+void vec_free(struct vec_t* vec) {
+    free(vec->entries);
+    free(vec);
+}
+
+uint64_t vec_size(const struct vec_t* vec) {
+    return vec->ix;
+}
+
+void vec_insert(struct vec_t* vec, void* elem) {
+    assert(vec != NULL);
+    assert(elem != NULL);
+
+    // resize
+    if (vec->ix == vec->capacity) {
+        size_t new_capacity = vec->capacity * RESIZE_FACTOR;
+        void* new_entries = (void*)malloc(new_capacity * vec->elem_size);
+
+        if (new_entries == NULL) {
+            printf("Unable to resize vec_t: out of memory.\n");
+            exit(-1);
+        }
+
+        memcpy(new_entries, vec->entries, vec->ix * vec->elem_size);
+
+        void* old_entries = vec->entries;
+        vec->entries = new_entries;
+
+        free(old_entries);
+    }
+
+    void* offset = vec->entries + (vec->ix * vec->elem_size);
+    memcpy(offset, elem, vec->elem_size);
+    vec->ix++;
+}
+
+void* vec_get(struct vec_t* vec, size_t i) {
+    assert(vec != NULL);
+
+    if (i > vec->ix) {
+        return NULL;
+    }
+
+    size_t offset = i * vec->elem_size;
+    return vec->entries + offset;
+}
+
+void* vec_peek(struct vec_t* vec) {
+    size_t offset = vec->ix * vec->elem_size;
+
+    return vec->entries + offset;
+}
+
+#endif

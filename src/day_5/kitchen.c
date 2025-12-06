@@ -6,12 +6,40 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "vec.h"
+
 #define BUF_SIZE 400
+#define INIT_INTERVAL_VEC_SIZE 100
+
+#define MIN(a, b) (a <= b ? a : b)
+#define MAX(a, b) (a >= b ? a : b)
 
 struct interval {
     uint64_t lo;
     uint64_t hi;
 };
+
+uint64_t interval_size(const struct interval* i) {
+    assert(i->hi >= i->lo);
+
+    return 1 + (i->hi - i->lo);
+}
+
+bool interval_overlaps(const struct interval* a, const struct interval* b) {
+    return (a->lo <= b->lo && a->hi >= b->lo)
+        || (b->lo <= a->lo && b->hi >= a->lo)
+        || (a->lo == b->lo && a->hi == b->hi);
+}
+
+// if a overlaps b, merge b into a.
+void interval_merge(struct interval* a, const struct interval* b) {
+    if (!interval_overlaps(a, b)) {
+        return;
+    }
+
+    a->lo = MIN(a->lo, b->lo);
+    a->hi = MAX(a->hi, b->hi);
+}
 
 // an interval tree node
 struct node {
@@ -98,12 +126,27 @@ bool contains(const struct node* root, uint64_t v) {
     return contains(root->right, v);
 }
 
+void in_order(const struct node* root, struct vec_t* intervals) {
+    if (root == NULL) {
+        return;
+    }
+
+    in_order(root->left, intervals);
+
+    vec_insert(intervals, (void*)root->interval);
+
+    in_order(root->right, intervals);
+}
+
 int main()
 {
     char buf[BUF_SIZE];
     bool parsing_intervals = true;
     struct node* root = NULL;
+    struct vec_t* intervals =
+        vec_new(INIT_INTERVAL_VEC_SIZE, sizeof (struct interval));
     uint64_t sum_1 = 0;
+    uint64_t sum_2 = 0;
 
     while (fgets(buf, sizeof (buf), stdin)) {
         size_t buf_len = strlen(buf);
@@ -114,9 +157,40 @@ int main()
             uint64_t lo = 0;
             uint64_t hi = 0;
             if (sscanf(buf, "%lu-%lu", &lo, &hi) != EOF) {
-                struct interval i = { .lo = lo, .hi = hi };
-                node_insert(&root, i);
+                struct interval* i =
+                    (struct interval*)malloc(sizeof (struct interval));
+                i->lo = lo;
+                i->hi = hi;
+
+                node_insert(&root, (struct interval)*i);
             } else {
+                // part 2
+                in_order(root, intervals);
+                assert(vec_size(intervals) > 0);
+
+                struct interval* acc_interval = vec_get(intervals, 0);
+                struct vec_t* merged = vec_new(INIT_INTERVAL_VEC_SIZE, sizeof (struct interval));
+                for (int i = 1; i < vec_size(intervals); ++i) {
+                    struct interval* next_interval = vec_get(intervals, i);
+
+                    if (interval_overlaps(acc_interval, next_interval)) {
+                        interval_merge(acc_interval, next_interval);
+                    } else {
+                        vec_insert(merged, acc_interval);
+                        acc_interval = next_interval;
+                    }
+                }
+
+                if (interval_overlaps(acc_interval, vec_peek(merged))) {
+                    interval_merge(vec_peek(merged), acc_interval);
+                } else {
+                    vec_insert(merged, acc_interval);
+                }
+
+                for (int i = 0; i < vec_size(merged); ++i) {
+                    sum_2 += interval_size(vec_get(merged, i));
+                }
+
                 parsing_intervals = false;
             }
         } else {
@@ -130,5 +204,6 @@ int main()
     }
 
     printf("Part 1: %" PRIu64 "\n", sum_1);
+    printf("Part 2: %" PRIu64 "\n", sum_2);
     return 0;
 }
