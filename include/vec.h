@@ -155,6 +155,20 @@ void vec_free(struct vec_t* vec) {
     free(vec);
 }
 
+struct vec_t* vec_copy(struct vec_t* vec) {
+    void* entries = (void*)malloc(vec->capacity * vec->elem_size);
+
+    memcpy(entries, vec->entries, vec->ix * vec->elem_size);
+
+    struct vec_t* cpy = (struct vec_t*)malloc(sizeof (struct vec_t));
+    cpy->ix = vec->ix;
+    cpy->elem_size = vec->elem_size;
+    cpy->capacity = vec->capacity;
+    cpy->entries = entries;
+
+    return cpy;
+}
+
 uint64_t vec_size(const struct vec_t* vec) {
     return vec->ix;
 }
@@ -186,7 +200,7 @@ void vec_insert(struct vec_t* vec, void* elem) {
     vec->ix++;
 }
 
-void* vec_get(struct vec_t* vec, size_t i) {
+void* vec_get(const struct vec_t* vec, size_t i) {
     assert(vec != NULL);
 
     if (i > vec->ix) {
@@ -195,6 +209,14 @@ void* vec_get(struct vec_t* vec, size_t i) {
 
     size_t offset = i * vec->elem_size;
     return vec->entries + offset;
+}
+
+void vec_set(struct vec_t* vec, size_t i, void* elem) {
+    assert(vec != NULL);
+    assert(i <= vec->ix);
+
+    void* offset = vec->entries + (i * vec->elem_size);
+    memcpy(offset, elem, vec->elem_size);
 }
 
 void* vec_peek(struct vec_t* vec) {
