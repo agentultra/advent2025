@@ -79,11 +79,11 @@ static uint64_t hash_key(const char* key) {
     return hash;
 }
 
-void* hash_get(struct hash_t* ht, const char* key) {
+void* hash_get(const struct hash_t* ht, const char* key) {
     assert(ht != NULL);
 
     uint64_t hash = hash_key(key);
-    size_t ix = (size_t)(hash & (uint64_t)ht->capacity - 1);
+    size_t ix = (size_t)(hash & ((uint64_t)ht->capacity - 1));
 
     while (ht->entries[ix].key != NULL) {
         if (strcmp(ht->entries[ix].key, key) == 0) {
@@ -105,7 +105,7 @@ void hash_set_entry(struct entry_t* entries, size_t capacity,
     assert(entries != NULL);
 
     uint64_t hash = hash_key(key);
-    size_t ix = (size_t)(hash & (uint64_t)capacity - 1);
+    size_t ix = (size_t)(hash & ((uint64_t)capacity - 1));
 
     while (entries[ix].key != NULL) {
         if (strcmp(entries[ix].key, key) == 0) {

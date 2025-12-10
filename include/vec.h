@@ -225,4 +225,8 @@ void* vec_peek(struct vec_t* vec) {
     return vec->entries + offset;
 }
 
+void vec_sort(struct vec_t* vec, int (*compar)(const void*, const void*)) {
+    qsort(vec->entries, vec_size(vec), vec->elem_size, compar);
+}
+
 #endif
