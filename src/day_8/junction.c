@@ -12,6 +12,10 @@
 #define HASH_SIZE 1024
 #define MAX_KEY_SIZE 100
 
+#define MAX_ITERATIONS 10
+
+static bool t = true;
+
 struct vec3_t {
     uint64_t x;
     uint64_t y;
@@ -75,31 +79,57 @@ int by_distance(const void* a, const void* b) {
     }
 }
 
-bool is_connected(const struct hash_t* circuits, const struct pair* p) {
+bool is_connected(const struct vec_t* circuits, const struct pair* p) {
     assert(circuits != NULL);
     assert(p != NULL);
 
     struct vec3_t* a = p->left;
     struct vec3_t* b = p->right;
 
-    struct hash_t* a_circuit = hash_get(circuits, vec3_key(a));
-    struct hash_t* b_circuit = hash_get(circuits, vec3_key(b));
+    // if we find a circuit where both p->left and p->right are
+    // members, they are connected.
+    for (int i = 0; i < vec_size(circuits); ++i) {
+        struct hash_t* circuit = vec_get(circuits, i);
 
-    bool a_connected = hash_get(b_circuit, vec3_key(a));
-    bool b_connected = hash_get(a_circuit, vec3_key(b));
+        if (hash_get(circuit, vec3_key(a)) && hash_get(circuit, vec3_key(b))) {
+            return true;
+        }
+    }
 
-    return a_connected && b_connected;
+    return false;
 }
 
-void connect(struct hash_t* circuits, const struct pair* p) {
+void connect(struct vec_t* circuits, const struct pair* p) {
     struct vec3_t* a = p->left;
     struct vec3_t* b = p->right;
 
-    struct hash_t* a_circuit = hash_get(circuits, vec3_key(a));
-    struct hash_t* b_circuit = hash_get(circuits, vec3_key(b));
+    // Find a circuit such that p->left ^ p->right is true.
+    // Then add the other to the circuit.
+    for (int i = 0; i < vec_size(circuits); ++i) {
+        struct hash_t* circuit = vec_get(circuits, i);
 
-    hash_set(a_circuit, vec3_key(b), (void*)true);
-    hash_set(b_circuit, vec3_key(a), (void*)true);
+        void* a_in_circuit = hash_get(circuit, vec3_key(a));
+        void* b_in_circuit = hash_get(circuit, vec3_key(b));
+
+        if (a_in_circuit != NULL && *(bool*)a_in_circuit) {
+            assert(!hash_get(circuit, vec3_key(b)));
+            hash_set(circuit, vec3_key(b), &t);
+            return;
+        } else if (b_in_circuit != NULL && *(bool*)b_in_circuit) {
+            assert(!hash_get(circuit, vec3_key(a)));
+            hash_set(circuit, vec3_key(a), &t);
+            return;
+        }
+    }
+
+    // If no such circuit exists, create a new circuit with p->left
+    // and p->right. We know `circuits` is populated before we start
+    // connecting junction boxes, just here for completeness.
+    struct hash_t* circuit = hash_new(HASH_SIZE);
+
+    hash_set(circuit, vec3_key(a), &t);
+    hash_set(circuit, vec3_key(b), &t);
+    vec_insert(circuits, circuit);
 }
 
 int by_size(const void* a, const void*b) {
@@ -120,8 +150,8 @@ int main()
     char buf[BUF_SIZE] = {0};
     struct vec_t* boxes = vec_new(VEC_SIZE, sizeof (struct vec3_t));
     struct vec_t* pairs = vec_new(VEC_SIZE, sizeof (struct pair));
-    // hash<char, hash<char, bool>>
-    struct hash_t* circuits = hash_new(HASH_SIZE);
+    // vec<hash<char, bool>>
+    struct vec_t* circuits = vec_new(VEC_SIZE, sizeof (struct hash_t));
 
     while (fgets(buf, sizeof (buf), stdin)) {
         size_t buf_len = strlen(buf);
@@ -135,7 +165,8 @@ int main()
         vec_insert(boxes, v);
 
         struct hash_t* circuit = hash_new(HASH_SIZE);
-        hash_set(circuits, vec3_key(v), circuit);
+        hash_set(circuit, vec3_key(v), &t);
+        vec_insert(circuits, circuit);
     }
 
     for (int i = 0; i < vec_size(boxes); ++i) {
@@ -157,23 +188,25 @@ int main()
 
     vec_sort(pairs, &by_distance);
 
-    for (int i = 0; i < vec_size(pairs); ++i) {
-        struct pair* p = vec_get(pairs, i);
+    for (int i = 0; i < MAX_ITERATIONS; ++i) {
+        int pi = i % vec_size(pairs);
+        struct pair* p = vec_get(pairs, pi);
 
         print_pair(p);
 
         if (!is_connected(circuits, p)) {
+            printf("Connect!\n");
             connect(circuits, p);
         }
     }
 
-    /* vec_sort(circuits, &by_size); */
+    vec_sort(circuits, &by_size);
 
-    /* for (int i = 0; i < vec_size(circuits); ++i) { */
-    /*     struct vec_t* circuit = vec_get(circuits, i); */
+    for (int i = 0; i < vec_size(circuits); ++i) {
+        struct vec_t* circuit = vec_get(circuits, i);
 
-    /*     printf("Circuit of size: %" PRIu64 "\n", vec_size(circuit)); */
-    /* } */
+        printf("Circuit of size: %" PRIu64 "\n", vec_size(circuit));
+    }
 
     return 0;
 }
