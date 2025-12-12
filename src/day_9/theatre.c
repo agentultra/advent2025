@@ -64,11 +64,47 @@ void grid_set(struct grid* g, int x, int y, void* elem) {
     vec_set(g->entries, ix, elem);
 }
 
+enum tile* grid_at(const struct grid* g, int x, int y) {
+    int mod_x = x < 0 ? x + g->w : x % g->w;
+    int mod_y = y < 0 ? y + g->h : y % g->h;
+
+    int ix = (g->w * mod_y) + mod_x;
+    enum tile* t = vec_get(g->entries, ix);
+    return t;
+}
+
 enum tile {
     EMPTY,
     GREEN,
     RED
 };
+
+void print_grid(struct grid* g) {
+    for (int j = 0; j < g->h; ++j) {
+        for (int i = 0; i < g->w; ++i) {
+            enum tile* t = grid_at(g, i, j);
+            switch (*t) {
+            case EMPTY: {
+                printf(".");
+                break;
+            }
+            case GREEN: {
+                printf("X");
+                break;
+            }
+            case RED: {
+                printf("#");
+                break;
+            }
+            default:
+                printf("?");
+                break;
+            }
+
+            if (i == g->w-1) printf("\n");
+        }
+    }
+}
 
 static enum tile empty = EMPTY;
 static enum tile red = RED;
@@ -92,7 +128,7 @@ int main()
     }
 
     uint64_t max_area = 0;
-    struct grid* map = grid_new(max_x + 1, max_y + 1, &empty, sizeof (enum tile));
+    struct grid* map = grid_new(max_x + 2, max_y + 2, &empty, sizeof (enum tile));
 
     for (int i = 0; i < vec_size(points); ++i) {
         struct vec2_t* v1 = vec_get(points, i);
@@ -111,6 +147,8 @@ int main()
             }
         }
     }
+
+    print_grid(map);
 
     printf("Part 1: %" PRIu64 "\n", max_area);
     return 0;
