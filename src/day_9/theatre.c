@@ -32,112 +32,54 @@ uint64_t area(struct vec2_t* m, struct vec2_t* n) {
     return (a + 1) * (b + 1);
 }
 
-struct grid {
-    uint64_t w;
-    uint64_t h;
-    struct vec_t* entries;
+struct rect_t {
+    struct vec2_t* v1;
+    struct vec2_t* v2;
+    uint64_t area;
 };
 
-struct grid* grid_new(uint64_t w, uint64_t h, void* default_elem, size_t elem_size) {
-    size_t entries_size = w * h;
-    struct vec_t* entries = vec_new(entries_size, elem_size);
+int by_area_desc(const void* a, const void* b) {
+    struct rect_t* rect_a = (struct rect_t*)a;
+    struct rect_t* rect_b = (struct rect_t*)b;
 
-    for (size_t i = 0; i < entries_size; ++i) {
-        vec_insert(entries, default_elem);
+    if (rect_a->area <= rect_b->area) {
+        return 1;
+    } else if (rect_a->area == rect_b->area) {
+        return 0;
+    } else {
+        return -1;
     }
-
-    struct grid* g = (struct grid*)malloc(sizeof (struct grid));
-
-    if (g == NULL) {
-        printf("Unable to allocation new grid: out of memory.\n");
-        exit(-1);
-    }
-
-    g->w = w;
-    g->h = h;
-    g->entries = entries;
-
-    return g;
 }
 
-void grid_set(struct grid* g, int x, int y, void* elem) {
-    int mod_x = x < 0 ? x + g->w : x % g->w;
-    int mod_y = y < 0 ? y + g->h : y % g->h;
+bool edge_overlaps(const struct rect_t* r, const struct vec_t* points) {
+    for (int i = 0; i < vec_size(points); ++i) {
+        struct vec2_t* a = vec_get(points, i);
+        struct vec2_t* b = vec_get(points, (i + 1) % vec_size(points));
 
-    int ix = (g->w * mod_y) + mod_x;
-    vec_set(g->entries, ix, elem);
-}
+        uint64_t min_x = MIN(a->x, b->x);
+        uint64_t min_y = MIN(a->y, b->y);
+        uint64_t max_x = MAX(a->x, b->x);
+        uint64_t max_y = MAX(a->y, b->y);
 
-enum tile* grid_at(const struct grid* g, int x, int y) {
-    int mod_x = x < 0 ? x + g->w : x % g->w;
-    int mod_y = y < 0 ? y + g->h : y % g->h;
+        uint64_t r_min_x = MIN(r->v1->x, r->v2->x);
+        uint64_t r_min_y = MIN(r->v1->y, r->v2->y);
+        uint64_t r_max_x = MAX(r->v1->x, r->v2->x);
+        uint64_t r_max_y = MAX(r->v1->y, r->v2->y);
 
-    int ix = (g->w * mod_y) + mod_x;
-    enum tile* t = vec_get(g->entries, ix);
-    return t;
-}
-
-enum tile {
-    EMPTY,
-    GREEN,
-    RED
-};
-
-static enum tile empty = EMPTY;
-static enum tile green = GREEN;
-static enum tile red = RED;
-
-void print_grid(struct grid* g) {
-    for (int j = 0; j < g->h; ++j) {
-        for (int i = 0; i < g->w; ++i) {
-            enum tile* t = grid_at(g, i, j);
-            switch (*t) {
-            case EMPTY: {
-                printf(".");
-                break;
-            }
-            case GREEN: {
-                printf("X");
-                break;
-            }
-            case RED: {
-                printf("#");
-                break;
-            }
-            default:
-                printf("?");
-                break;
-            }
-
-            if (i == g->w-1) printf("\n");
+        if (max_y < r_min_y + 1 || min_y > r_max_y - 1 || max_x < r_min_x + 1 || min_x > r_max_x - 1) {
+            continue;
         }
+        return true;
     }
-}
 
-void flood_fill(struct grid* g) {
-    for (int j = 0; j < g->h; ++j) {
-        for (int i = 0; i < g->w; ++i) {
-            enum tile* t = grid_at(g, i, j);
-
-            if (*t != empty) {
-                for (int x = i+1; x < g->w-1; ++x) {
-                    enum tile* next = grid_at(g, x, j);
-
-                    if (*next == empty) {
-                        grid_set(g, x, j, &green);
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-    }
+    return false;
 }
 
 int main()
 {
     char buf[BUF_SIZE];
     struct vec_t* points = vec_new(VEC_SIZE, sizeof (struct vec2_t));
+    struct vec_t* rects = vec_new(VEC_SIZE, sizeof (struct rect_t));
     uint64_t max_x = 0;
     uint64_t max_y = 0;
 
@@ -152,17 +94,10 @@ int main()
         vec_insert(points, v);
     }
 
-    uint64_t max_area = 0;
-    struct grid* map = grid_new(max_x + 2, max_y + 2, &empty, sizeof (enum tile));
-
-    struct vec2_t* init_v2 = vec_get(points, 0);
-    struct vec2_t initial_position = *init_v2;
-    struct vec2_t last_position = initial_position;
+    uint64_t max_area_1 = 0;
 
     for (int i = 0; i < vec_size(points); ++i) {
         struct vec2_t* v1 = vec_get(points, i);
-
-        grid_set(map, v1->x, v1->y, &red);
 
         for (int j = 0; j < vec_size(points); ++j) {
             if (i == j) continue;
@@ -171,67 +106,33 @@ int main()
 
             uint64_t a = area(v1, v2);
 
-            if (a > max_area) {
-                max_area = a;
+            struct rect_t* r = (struct rect_t*)malloc(sizeof (struct rect_t));
+            r->v1 = v1;
+            r->v2 = v2;
+            r->area = a;
+
+            vec_insert(rects, r);
+
+            if (a > max_area_1) {
+                max_area_1 = a;
             }
         }
-
-        if (vec2_equal(v1, &initial_position)) {
-            continue;
-        } else {
-            if (last_position.x == v1->x) {
-                for (int j = MIN(last_position.y, v1->y)+1; j < MAX(last_position.y, v1->y); ++j) {
-                    grid_set(map, last_position.x, j, &green);
-                }
-            } else if (last_position.y == v1->y) {
-                for (int i = MIN(last_position.x, v1->x)+1; i < MAX(last_position.x, v1->x); ++i) {
-                    grid_set(map, i, last_position.y, &green);
-                }
-            } else {
-                printf("Something went wrong: (%" PRIu64 ", %" PRIu64 ")\n", v1->x, v1->y);
-            }
-            last_position = *v1;
-        }
     }
 
-    for (int j = MIN(initial_position.y, last_position.y)+1; j < MAX(initial_position.y, last_position.y); ++j) {
-        grid_set(map, initial_position.x, j, &green);
-    }
-
-    for (int i = MIN(initial_position.x, last_position.x)+1; i < MAX(initial_position.x, last_position.x); ++i) {
-        grid_set(map, i, initial_position.y, &green);
-    }
-
-    flood_fill(map);
+    vec_sort(rects, &by_area_desc);
 
     uint64_t max_area_2 = 0;
 
-    for (int j = 0; j < vec_size(points); ++j) {
-        struct vec2_t* v1 = vec_get(points, j);
+    for (int i = 0; i < vec_size(rects); ++i) {
+        struct rect_t* r = vec_get(rects, i);
 
-        for (int i = 0; i < vec_size(points); ++i) {
-            if (i == j) continue;
-
-            struct vec2_t* v2 = vec_get(points, i);
-            struct vec2_t v3 = { .x = v1->x, .y = v2->y };
-            struct vec2_t v4 = { .x = v2->x, .y = v1->y };
-
-            enum tile* tile_v3 = grid_at(map, v3.x, v3.y);
-            enum tile* tile_v4 = grid_at(map, v4.x, v4.y);
-
-            if (*tile_v3 != empty && *tile_v4 != empty) {
-                uint64_t rect_area = area(v1, v2);
-
-                if (rect_area > max_area_2) {
-                    max_area_2 = rect_area;
-                }
-            }
+        if (!edge_overlaps(r, points)) {
+            max_area_2 = r->area;
+            break;
         }
     }
 
-    //print_grid(map);
-
-    printf("Part 1: %" PRIu64 "\n", max_area);
+    printf("Part 1: %" PRIu64 "\n", max_area_1);
     printf("Part 2: %" PRIu64 "\n", max_area_2);
     return 0;
 }
